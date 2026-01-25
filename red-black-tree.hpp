@@ -30,10 +30,6 @@ class RBTree_t {
 
     Node_t* root_;
 
-public:
-    RBTree_t() = default;
-    ~RBTree_t() = default;
-
 
     void left_rotate(Node_t *node) {
         auto new_local_root = node->right_;
@@ -83,33 +79,6 @@ public:
     }
 
 
-    void insert(const T& key) {
-        auto new_node = new Node_t(key);
-        auto current = root_;
-        Node_t* parent = nullptr;
-
-        while (current != nullptr) {
-            parent = current;
-            if (new_node->key_ < current->key_) {
-                current = current->left_;
-            }
-            else {
-                current = current->right_;
-            }
-        }
-
-        new_node->parent_ = parent;
-        if (parent == nullptr) {
-            root_ = new_node;
-        } else if (new_node->key_ < parent->key_) {
-            parent->left_ = new_node;
-        } else {
-            parent->right_ = new_node;
-        }
-
-        insertion_fix(new_node);
-    }
-
     void insertion_fix(Node_t* node) {
         while (node->parent_ != nullptr && node->parent_->colour_ == RED) {
             if (node->parent_ == node->parent_->parent_->left_) {
@@ -148,6 +117,68 @@ public:
         }
         root_->colour_ = BLACK;
     }
+
+
+    Node_t* search(const T& key) {
+        auto current = root_;
+        while (current != nullptr) {
+            if (key == current->key_) {
+                return current;
+            } else if (key < current->key_) {
+                current = current->left_;
+            } else {
+                current = current->right_;
+            }
+        }
+        return nullptr;
+    }
+
+
+    void transplant(Node_t* dst, Node_t* src) {
+        if (dst->parent_ == nullptr) {
+            root_ = src;
+        } else if (dst == dst->parent_->left_) {
+            dst->parent_->left_ = src;
+        } else {
+            dst->parent_->right_ = src;
+        }
+        src->parent_ = dst->parent_;
+    }
+
+
+public:
+    RBTree_t() = default;
+    ~RBTree_t() = default;
+
+
+    void insert(const T& key) {
+        auto new_node = new Node_t(key);
+        auto current = root_;
+        Node_t* parent = nullptr;
+
+        while (current != nullptr) {
+            parent = current;
+            if (new_node->key_ < current->key_) {
+                current = current->left_;
+            }
+            else {
+                current = current->right_;
+            }
+        }
+
+        new_node->parent_ = parent;
+        if (parent == nullptr) {
+            root_ = new_node;
+        } else if (new_node->key_ < parent->key_) {
+            parent->left_ = new_node;
+        } else {
+            parent->right_ = new_node;
+        }
+
+        insertion_fix(new_node);
+    }
+
+
 };
 
 
