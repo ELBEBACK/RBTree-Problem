@@ -34,6 +34,7 @@ public:
     RBTree_t() = default;
     ~RBTree_t() = default;
 
+
     void left_rotate(Node_t *node) {
         auto new_local_root = node->right_;
         node.right_ = new_local_root->left_;
@@ -56,6 +57,7 @@ public:
         new_local_root->left_ = node;
         node->parent_ = new_local_root;
     }
+
 
     void right_rotate(Node_t *node) {
         auto new_local_root = node->left_;
@@ -80,7 +82,72 @@ public:
         node->parent_ = new_local_root;
     }
 
-    
+
+    void insert(const T& key) {
+        auto new_node = new Node_t(key);
+        auto current = root_;
+        Node_t* parent = nullptr;
+
+        while (current != nullptr) {
+            parent = current;
+            if (new_node->key_ < current->key_) {
+                current = current->left_;
+            }
+            else {
+                current = current->right_;
+            }
+        }
+
+        new_node->parent_ = parent;
+        if (parent == nullptr) {
+            root_ = new_node;
+        } else if (new_node->key_ < parent->key_) {
+            parent->left_ = new_node;
+        } else {
+            parent->right_ = new_node;
+        }
+
+        insertion_fix(new_node);
+    }
+
+    void insertion_fix(Node_t* node) {
+        while (node->parent_ != nullptr && node->parent_->colour_ == RED) {
+            if (node->parent_ == node->parent_->parent_->left_) {
+                Node_t* uncle = node->parent_->parent_->right_;
+                if (uncle->colour_ == RED) {
+                    node->parent_->colour_ = BLACK;
+                    uncle->colour_ = BLACK;
+                    node->parent_->parent_->colour_ = RED;
+                    node = node->parent_->parent_;
+                } else {
+                    if (node == node->parent_->right_) {
+                        node = node->parent_;
+                        left_rotate(node);
+                    }
+                    node->parent_->colour_ = BLACK;
+                    node->parent_->parent_->colour_ = RED;
+                    right_rotate(node->parent_->parent_);
+                }
+            } else {
+                Node_t* uncle = node->parent_->parent_->left_;
+                if (uncle->colour_ == RED) {
+                    node->parent_->colour_ = BLACK;
+                    uncle->colour_ = BLACK;
+                    node->parent_->parent_->colour_ = RED;
+                    node = node->parent_->parent_;
+                } else {
+                    if (node == node->parent_->left_) {
+                        node = node->parent_;
+                        right_rotate(node);
+                    }
+                    node->parent_->colour_ = BLACK;
+                    node->parent_->parent_->colour_ = RED;
+                    left_rotate(node->parent_->parent_);
+                }
+            }
+        }
+        root_->colour_ = BLACK;
+    }
 };
 
 
