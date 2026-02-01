@@ -1,6 +1,9 @@
 #pragma once
  
 #include <iostream>
+#include <cstring>
+#include <fstream>
+#include <cstdlib>
 
 namespace rbtree {
 
@@ -17,13 +20,15 @@ class RBTree_t {
         Node_t* right_;
         Node_t* parent_;
         Colour colour_;
+        size_t subtree_size_;
 
         Node_t(const T& key, Colour colour, Node_t* nil) : 
                     key_(key), 
                     left_(nil), 
                     right_(nil), 
                     parent_(nil), 
-                    colour_(colour) {}
+                    colour_(colour),
+                    subtree_size_(1) {}
 
     };
 
@@ -37,6 +42,7 @@ class RBTree_t {
         nil_node->left_ = nil_node;
         nil_node->right_ = nil_node;
         nil_node->parent_ = nil_node;
+        nil_node->subtree_size_ = 0;
         return nil_node;
     }
 
@@ -62,6 +68,9 @@ class RBTree_t {
 
         new_local_root->left_ = node;
         node->parent_ = new_local_root;
+
+        subtree_size_update(node);
+        subtree_size_update(new_local_root);
     }
 
 
@@ -86,6 +95,9 @@ class RBTree_t {
 
         new_local_root->right_ = node;
         node->parent_ = new_local_root;
+
+        subtree_size_update(node);
+        subtree_size_update(new_local_root);
     }
 
 
@@ -154,6 +166,8 @@ class RBTree_t {
         }
         if (src != NIL_)
             src->parent_ = dst->parent_;
+
+        subtree_size_update(dst->parent_);
     }
 
 
@@ -213,7 +227,7 @@ class RBTree_t {
     }
 
 
-    Node_t* minimum(Node_t* node) {
+    Node_t* minimum(Node_t* node) const {
         while (node->left_ != NIL_) {
             node = node->left_;
         }
@@ -228,6 +242,94 @@ class RBTree_t {
         clear(node->right_);
         
         delete node;
+    }
+
+
+    std::string gviz_string() const {
+        std::string result = "digraph RBTree {\n";
+        result += "    edge [arrowhead=vee, arrowsize=0.7];\n";
+        result += "    node [shape=circle, fontname=\"Courier\"];\n";
+
+        if (root_ == NIL_) {
+            result += "\n";
+        } else {
+            gviz_helper(root_, result);
+        }
+
+        result += "}\n";
+        return result;
+    }
+
+
+    void gviz_helper(Node_t* node, std::string& result) const {
+        if (node != NIL_) {
+            result += "    " + std::to_string(node->key_) +
+                        " [label=\"" + std::to_string(node->key_) + 
+                        "\", fillcolor=" + (node->colour_ == RED ? "red" : "black") + 
+                        ", fontcolor=white, style=filled, color=black, penwidth=2];\n";
+
+            if (node->left_ != NIL_) {
+                result += "    \"" + std::to_string(node->key_) + 
+                          "\" -> \"" + std::to_string(node->left_->key_) + "\";\n";
+            } 
+            if (node->right_ != NIL_) {
+                result += "    \"" + std::to_string(node->key_) + 
+                          "\" -> \"" + std::to_string(node->right_->key_) + "\";\n";
+            } 
+
+            gviz_helper(node->left_, result);
+            gviz_helper(node->right_, result);
+        }
+    }
+
+
+    void subtree_size_update(Node_t* node) {
+        if (node != NIL_) {
+            node->subtree_size_ = 1 + node->left_->subtree_size_ + node->right_->subtree_size_;
+        }
+    }
+
+
+    Node_t* find_lower_bound(const T& key) const {
+        Node_t* current = root_;
+        Node_t* lower_bound = NIL_;
+        while (current != NIL_) {
+            if (current->key_ >= key) {
+                lower_bound = current;
+                current = current->left_;
+            } else {
+                current = current->right_;
+            }
+        }
+        return lower_bound;
+    }
+
+
+    Node_t* find_higher_bound(const T& key) const {
+        Node_t* current = root_;
+        Node_t* higher_bound = NIL_;
+        while (current != NIL_) {
+            if (current->key_ <= key) {
+                higher_bound = current;
+                current = current->right_;
+            } else {
+                current = current->left_;
+            }
+        }
+        return higher_bound;
+    }
+
+
+    Node_t* find_successor(Node_t* node) const {
+        if (node->right_ != NIL_) 
+            return minimum(node->right_);
+        
+        Node_t* parent = node->parent_;
+        while (parent != NIL_ && node == parent->right_) {
+            node = parent;
+            parent = parent->parent_;
+        }
+        return parent;
     }
 
 
@@ -313,6 +415,45 @@ public:
 
     bool contains(const T& key) const {
         return search(key) != NIL_;
+    }
+
+
+    size_t number_in_range(const T& from, const T& till) const {
+        
+        Node_t* lower_bound = find_lower_bound(from);
+        std::cout << lower_bound->key_ << "\n";
+
+        Node_t* higher_bound = find_higher_bound(till);
+        std::cout << higher_bound->key_ << "\n";
+
+        if (lower_bound == NIL_ || higher_bound == NIL_) 
+            return 0;
+        
+        size_t count = 0;
+        Node_t* current = lower_bound;
+
+        while (current != nullptr && current != higher_bound->right_) {
+            count++;
+            current = find_successor(current);      
+        }
+
+        return count;
+    }
+
+
+    void dump(const char* filename) const {
+        std::string dot_file = std::string(filename) + ".dot";
+        std::ofstream dump_file(dot_file);
+        
+        dump_file << gviz_string();
+
+        dump_file.close();
+        
+        std::string cmd = "dot -Tpng " + dot_file + " -o" + std::string(filename) + ".png";
+        std::system(cmd.c_str());
+        cmd = "rm " + dot_file;
+        std::system(cmd.c_str());
+        
     }
 };
 
